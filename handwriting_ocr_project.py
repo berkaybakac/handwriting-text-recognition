@@ -1,31 +1,18 @@
+import os
 import cv2
 import pytesseract
 
-# Görsel dosya yolu — test etmek istediğin görselin adı
-image_path = 'images/cemal_sureya.png'
+# 🔥 Doğru path: '.../tessdata/' olmalı
+os.environ['TESSDATA_PREFIX'] = '/opt/homebrew/share/tessdata/'
 
-# Görseli yükle
+image_path = "images/türkçe_elyazısı_2.png"
 image = cv2.imread(image_path)
-if image is None:
-    raise FileNotFoundError(f"Image not found at path: {image_path}")
-
-# Gri tonlamaya çevir
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-# Threshold (eşikleme) uygulayarak yazıyı daha belirgin hale getir
+gray = cv2.GaussianBlur(gray, (5, 5), 0)
 _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-# OCR işlemi (dil: Türkçe, psm 6 = satır bazlı tanıma)
 custom_config = r'--oem 3 --psm 6 -l tur'
-extracted_text = pytesseract.image_to_string(thresh, config=custom_config)
+text = pytesseract.image_to_string(thresh, config=custom_config)
 
-# Çıktıyı terminale yazdır
-print("\n[Extracted Text from Image]\n")
-print(extracted_text)
-
-# OCR çıktısını dosyaya kaydet
-output_path = 'ocr_output.txt'
-with open(output_path, 'w', encoding='utf-8') as f:
-    f.write(extracted_text)
-
-print(f"\n✅ OCR result saved to: {output_path}")
+print("\n📝 OCR ÇIKTISI:")
+print(text)
