@@ -1,6 +1,11 @@
 __pycache__/
-.DS_Store
 output/
 images/
 .vscode/
 *.png
+
+# macOS system directories
+.DS_Store
+.Trash
+Library/
+.config/
