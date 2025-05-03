@@ -1,7 +1,7 @@
-import cv2
+import cv2 
 import numpy as np
 import pytesseract
-import os
+import os 
 import re
 import pandas as pd
 
