@@ -1,7 +1,7 @@
-import cv2 
+import cv2
 import numpy as np
 import pytesseract
-import os 
+import os
 import re
 import pandas as pd
 
@@ -11,13 +11,18 @@ image_path = "images/berkay.png"
 # Görseli oku
 image = cv2.imread(image_path)
 
+# Kontrast artırma
+alpha = 1.0  # Kontrast kontrol (1.0-3.0 arası)
+beta = 0     # Parlaklık kontrol
+image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+
 # Grayscale dönüşümü
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Gürültü azaltma (Gaussian Blur)
 blur = cv2.GaussianBlur(gray, (13, 13), 0)
 
-# Binary Thresholding (Sabit eşik)
+# Binary Thresholding (Adaptive Threshold)
 thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
                                cv2.THRESH_BINARY_INV, 11, 2)
 # Morphology: Erode ve Dilate ile harfleri netleştir
@@ -29,8 +34,8 @@ morph = cv2.dilate(erode, kernel, iterations=1)
 custom_config = r'--oem 1 --psm 11 -l tur+eng'
 text = pytesseract.image_to_string(morph, config=custom_config)
 
-# Post-Processing: Hatalı karakterleri temizle
-text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇ\s.,]', '', text)  # Yalnızca harf, boşluk ve noktalama
+# Post-Processing: Hatalı karakterleri temizle, sayılar ve özel karakterler eklendi
+text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇ0-9\s.,:\']', '', text) 
 text = re.sub(r'\s+', ' ', text)  # Fazla boşlukları temizle
 lines = [line.strip() for line in text.split('\n') if line.strip()]  # Boş satırları kaldır
 
