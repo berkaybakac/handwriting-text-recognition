@@ -35,7 +35,9 @@ custom_config = r'--oem 1 --psm 11 -l tur+eng'
 text = pytesseract.image_to_string(morph, config=custom_config)
 
 # Post-Processing: Hatalı karakterleri temizle, sayılar ve özel karakterler eklendi
-text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇ0-9\s.,:\']', '', text) 
+text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇ0-9\s.,:\']', '', text)
+
+text = re.sub(r'\.\s+(?=[a-zğışöüç])', ' ', text) # Yanlış noktaları temizle
 text = re.sub(r'\s+', ' ', text)  # Fazla boşlukları temizle
 lines = [line.strip() for line in text.split('\n') if line.strip()]  # Boş satırları kaldır
 
