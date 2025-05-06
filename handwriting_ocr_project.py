@@ -11,11 +11,6 @@ image_path = "images/berkay.png"
 # Görseli oku
 image = cv2.imread(image_path)
 
-# Kontrast artırma
-alpha = 1.0  # Kontrast kontrol (1.0-3.0 arası)
-beta = 0     # Parlaklık kontrol
-image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-
 # Grayscale dönüşümü
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -34,12 +29,17 @@ morph = cv2.dilate(erode, kernel, iterations=1)
 custom_config = r'--oem 1 --psm 11 -l tur+eng'
 text = pytesseract.image_to_string(morph, config=custom_config)
 
-# Post-Processing: Hatalı karakterleri temizle, sayılar ve özel karakterler eklendi
-text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇ0-9\s.,:\']', '', text)
-
-text = re.sub(r'\.\s+(?=[a-zğışöüç])', ' ', text) # Yanlış noktaları temizle
-text = re.sub(r'\s+', ' ', text)  # Fazla boşlukları temizle
-lines = [line.strip() for line in text.split('\n') if line.strip()]  # Boş satırları kaldır
+# Post-Processing: Hatalı karakterleri temizle, noktalama işaretlerini koru
+text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇâî0-9\s.,:\'!?;-]', '', text)
+# Yanlış noktaları temizle
+text = re.sub(r'\.\s+(?=[a-zğışöüç])', ' ', text)
+# Satır atlamalarını koru, her satır içindeki fazla boşlukları temizle
+lines = text.split('\n')
+lines = [re.sub(r'\s+', ' ', line).strip() for line in lines]
+# Boş satırları filtrele
+lines = [line for line in lines if line]  # Boş satırları kaldır
+# Tire işaretlerini birleştir
+lines = [line.replace('- ', '') for line in lines]
 
 # Doğruluk oranını hesapla
 data = pytesseract.image_to_data(morph, config=custom_config, output_type=pytesseract.Output.DATAFRAME)
@@ -53,6 +53,12 @@ for line in lines:
 
 # Ortalama doğruluk oranını yazdır
 print(f"\nOrtalama Doğruluk Oranı: %{average_confidence:.2f}")
+
+# Tanınan metni bir dosyaya kaydet
+os.makedirs("output", exist_ok=True)
+with open("output/recognized_text.txt", "w", encoding="utf-8") as f:
+    for line in lines:
+        f.write(line + "\n")
 
 # İşlenmiş görseli kaydet
 os.makedirs("output", exist_ok=True)
