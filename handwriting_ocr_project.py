@@ -3,7 +3,6 @@ import numpy as np
 import pytesseract
 import os
 import re
-import pandas as pd
 
 # Görsel yolu
 image_path = "images/berkay.png"
