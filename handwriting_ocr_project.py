@@ -5,62 +5,45 @@ import os
 import re 
 import pandas as pd
 
-# Görsel yolu
+# Path to the image file
 image_path = "images/berkay.png"
 
-# Görseli oku
+# Read the image and convert to grayscale
 original_image = cv2.imread(image_path)
-
-# Grayscale dönüşümü
 grayscale_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
 
-# Gürültü azaltma (Gaussian Blur)
+# Apply Gaussian Blur and Adaptive Threshold
 blurred_image = cv2.GaussianBlur(grayscale_image, (13, 13), 0)
+thresholded_image = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
 
-# Binary Thresholding (Adaptive Threshold)
-thresholded_image = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                          cv2.THRESH_BINARY_INV, 11, 2)
-
-# Morphology: Erode ve Dilate ile harfleri netleştir
+# Morphological operations to sharpen text
 kernel = np.ones((2, 2), np.uint8)
-erode = cv2.erode(thresholded_image, kernel, iterations=1)
-morphed_image = cv2.dilate(erode, kernel, iterations=1)
+morphed_image = cv2.dilate(cv2.erode(thresholded_image, kernel, iterations=1), kernel, iterations=1)
 
-# Tesseract ile metin tanıma (hem Türkçe hem İngilizce)
+# Extract and clean text using Tesseract
 custom_config = r'--oem 1 --psm 11 -l tur+eng'
 extracted_text = pytesseract.image_to_string(morphed_image, config=custom_config)
+cleaned_lines = [re.sub(r'\s+', ' ', line).strip().replace('- ', '') for line in 
+                 re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇâî0-9\s.,:\'!?;-]', '', 
+                 re.sub(r'\.\s+(?=[a-zğışöüç])', ' ', extracted_text)).split('\n') if line]
 
-# Post-Processing: Hatalı karakterleri temizle, noktalama işaretlerini koru
-extracted_text = re.sub(r'[^a-zA-ZğĞıİöÖşŞüÜçÇâî0-9\s.,:\'!?;-]', '', extracted_text)
-extracted_text = re.sub(r'\.\s+(?=[a-zğışöüç])', ' ', extracted_text)
-# Satır atlamalarını koru, her satır içindeki fazla boşlukları temizle ve tireleri birleştir
-cleaned_lines = extracted_text.split('\n')
-cleaned_lines = [re.sub(r'\s+', ' ', line).strip().replace('- ', '') for line in cleaned_lines]
-cleaned_lines = list(filter(None, cleaned_lines))  # Boş satırları kaldır
+# Calculate accuracy using Pandas
+average_confidence = pytesseract.image_to_data(morphed_image, config=custom_config, 
+                     output_type=pytesseract.Output.DATAFRAME)['conf'].replace(-1, np.nan).mean() or 0
 
-# Doğruluk oranını hesapla (Pandas ile)
-data = pytesseract.image_to_data(morphed_image, config=custom_config, output_type=pytesseract.Output.DATAFRAME)
-confidences = data[data['conf'] != -1]['conf']  # Güven skoru -1 olmayan kelimeleri al
-average_confidence = confidences.mean() if not confidences.empty else 0
-
-# Çıktıyı yazdır
-print("\nOCR ÇIKTISI:")
+# Print the extracted text and accuracy
+print("\nOCR OUTPUT:")
 for line in cleaned_lines:
     print(line)
+print(f"\nAverage Accuracy: %{average_confidence:.2f}")
 
-# Ortalama doğruluk oranını yazdır
-print(f"\nOrtalama Doğruluk Oranı: %{average_confidence:.2f}")
-
-# Tanınan metni bir dosyaya kaydet
-os.makedirs("output", exist_ok=True)  # Çıktı dizinini bir kez oluştur
+# Save extracted text and processed image
+os.makedirs("output", exist_ok=True)
 with open("output/recognized_text.txt", "w", encoding="utf-8") as f:
-    for line in cleaned_lines:
-        f.write(line + "\n")
-
-# İşlenmiş görseli kaydet
+    f.write("\n".join(cleaned_lines))
 cv2.imwrite("output/final_processed.png", morphed_image)
 
-# (Opsiyonel) Orijinal görüntüde metin kutularını çizdir
+# (Optional) Draw text boxes on original image
 boxes = pytesseract.image_to_boxes(morphed_image, config=custom_config)
 for b in boxes.splitlines():
     b = b.split(' ')
